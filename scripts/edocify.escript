@@ -10,13 +10,8 @@
 
 -define(SEP(I, C, L), <<(binary:copy(<<$%>>, I))/binary, (binary:copy(C, L))/binary>>).
 
-%% regex for evil spec+specs
--define(REGEX_SPECSPEC, "ag -G '(erl|erl.src|hrl|hrl.src|escript)$' --nogroup '^\\-spec[^.]+\\.$(\\n+\\-spec[^.]+\\.$)+' core/ applications/").
 
-%% regex to find contributors tag.
--define(REGEX_HAS_CONTRIBUTORS, "ag -G '(erl|erl.src|hrl|hrl.src|escript)$' -l '%%+ *@?([Cc]ontributors|[Cc]ontributions)' core/ applications/").
-
--define(REGEX_BUMP_COPYRIGHT(Year), "ag -LG '(applications|core)/.*/src/.*.(erl|erl.src)$' '^%%% @copyright \\(C\\) 20[0-9]{2}-(" ++ Year ++ ")?, 2600Hz$'").
+-define(REGEX_BUMP_COPYRIGHT(Year), ).
 
 %% regex to find `@public' tag.
 %% TODO: remove private tag from this regex in a distant future.
@@ -60,10 +55,26 @@ main(_) ->
 
     io:format("Edocify Kazoo...~n~n"),
 
-    Run = [{?REGEX_SPECSPEC, "removing evil sepc+specs", fun evil_specs/1}
-          ,{?REGEX_BUMP_COPYRIGHT(integer_to_list(Year)), "bump/fix copyright", fun(R) -> bump_copyright(R, Year) end}
-          ,{?REGEX_HAS_CONTRIBUTORS, "rename and fix `@contributors' tags to '@author'", fun edocify_headers/1}
-          ,{?REGEX_PUBLIC_TAG, "remove @public tag", fun remove_public_tag/1}
+    Run = [
+           %% command for evil spec+specs
+           {"ag -G '(erl|erl.src|hrl|hrl.src|escript)$' --nogroup '^\\-spec[^.]+\\.$(\\n+\\-spec[^.]+\\.$)+' core/ applications/"
+           ,"removing evil sepc+specs"
+           ,fun evil_specs/1
+           }
+
+           %% command to fix contributors tag
+          ,{"ag -G '(erl|erl.src|hrl|hrl.src|escript)$' -l '%%+ *@?([Cc]ontributors|[Cc]ontributions)' core/ applications/"
+           ,"rename and fix `@contributors' tags to '@author'"
+           ,fun edocify_headers/1
+           }
+
+          ,{"ag -LG '(applications|core)/.*/src/.*.(erl|erl.src)$' '^%%% @copyright \\(C\\) 20[0-9]{2}-(" ++ integer_to_list(Year) ++ ")?, 2600Hz$'"
+           ,"bump/fix copyright"
+           ,fun(R) -> bump_copyright(R, Year) end
+           }
+          ],
+
+    Run = [{?REGEX_PUBLIC_TAG, "remove @public tag", fun remove_public_tag/1}
           ,{?REGEX_COMMENT_SPEC, "removing @spec from comments", fun remove_comment_specs/1}
           ,{?REGEX_SEP_SPEC, "adding missing comments block after separator", fun missing_comment_blocks_after_sep/1}
           ,{?REGEX_CB_RESOURCE_EXISTS_COMMENT, "escape code block for 'resource_exists' function crossbar modules", fun cb_resource_exists_comments/1}
